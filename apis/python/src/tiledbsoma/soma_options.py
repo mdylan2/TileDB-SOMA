@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import tiledb
 
+import tiledb
 
 def default_X_data_row_filters() -> List[tiledb.Filter]:
     return [
@@ -20,6 +21,10 @@ def default_X_data_offset_filters() -> List[tiledb.Filter]:
     return [
         tiledb.DoubleDeltaFilter(),
         tiledb.BitWidthReductionFilter(),
+        tiledb.ZstdFilter(),
+    ]
+def default_X_data_attr_filters():
+    return [
         tiledb.ZstdFilter(),
     ]
 
@@ -71,3 +76,10 @@ class SOMAOptions:
     allows_duplicates: bool = False
 
     max_thread_pool_workers: int = 8
+
+# DictionaryFilter() + DoubleDeltaFilter()   + RleFilter()
+# DictionaryFilter() + PositiveDeltaFilter() + RleFilter()
+# DictionaryFilter() + DoubleDeltaFilter()   + ZstdFilter()
+# DictionaryFilter() + PositiveDeltaFilter() + ZstdFilter()
+# DictionaryFilter() + DoubleDeltaFilter()   + BitShuffleFilter() + ZstdFilter()
+# DictionaryFilter() + PositiveDeltaFilter() + BitShuffleFilter() + ZstdFilter()

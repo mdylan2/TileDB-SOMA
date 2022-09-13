@@ -342,7 +342,9 @@ class AssayMatrix(TileDBArray):
         )
 
         eta_tracker = util.ETATracker()
+        print("TILEDBSC-PY PRE TILEDB.OPEN")
         with tiledb.open(self.uri, mode="w", ctx=self._ctx) as A:
+            print("TILEDBSC-PY POST TILEDB.OPEN")
             nrow = len(sorted_row_names)
 
             i = 0
@@ -360,6 +362,7 @@ class AssayMatrix(TileDBArray):
                 # Write the chunk-COO to TileDB.
                 d0 = sorted_row_names[chunk_coo.row + i]
                 d1 = col_names[chunk_coo.col]
+                print("TILEDBSC-PY CHUNK PREP")
 
                 if len(d0) == 0:
                     i = i2
@@ -385,7 +388,9 @@ class AssayMatrix(TileDBArray):
                 )
 
                 # Write a TileDB fragment
+                print("TILEDBSC-PY CHUNK-WRITE START")
                 A[d0, d1] = chunk_coo.data
+                print("TILEDBSC-PY CHUNK-WRITE END")
 
                 t2 = time.time()
                 chunk_seconds = t2 - t1

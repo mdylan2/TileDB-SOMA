@@ -176,12 +176,12 @@ def _from_anndata_aux(
     # Must be done first, to create the parent directory
     soma.create_unless_exists()
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    soma.obs.from_dataframe(dataframe=anndata.obs, extent=256)
-    soma._add_object(soma.obs)
-
-    soma.var.from_dataframe(dataframe=anndata.var, extent=2048)
-    soma._add_object(soma.var)
+#    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#    soma.obs.from_dataframe(dataframe=anndata.obs, extent=256)
+#    soma._add_object(soma.obs)
+#
+#    soma.var.from_dataframe(dataframe=anndata.var, extent=2048)
+#    soma._add_object(soma.var)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     soma.X.add_layer_from_matrix_and_dim_values(
@@ -192,44 +192,44 @@ def _from_anndata_aux(
     )
     soma._add_object(soma.X)
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    soma.obsm.create_unless_exists()
-    for key in anndata.obsm.keys():
-        soma.obsm.add_matrix_from_matrix_and_dim_values(
-            anndata.obsm[key], anndata.obs_names, key
-        )
-    soma._add_object(soma.obsm)
+#    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#    soma.obsm.create_unless_exists()
+#    for key in anndata.obsm.keys():
+#        soma.obsm.add_matrix_from_matrix_and_dim_values(
+#            anndata.obsm[key], anndata.obs_names, key
+#        )
+#    soma._add_object(soma.obsm)
 
-    soma.varm.create_unless_exists()
-    for key in anndata.varm.keys():
-        soma.varm.add_matrix_from_matrix_and_dim_values(
-            anndata.varm[key], anndata.var_names, key
-        )
-    soma._add_object(soma.varm)
+#    soma.varm.create_unless_exists()
+#    for key in anndata.varm.keys():
+#        soma.varm.add_matrix_from_matrix_and_dim_values(
+#            anndata.varm[key], anndata.var_names, key
+#        )
+#    soma._add_object(soma.varm)
 
-    soma.obsp.create_unless_exists()
-    for key in anndata.obsp.keys():
-        soma.obsp.add_matrix_from_matrix_and_dim_values(
-            anndata.obsp[key], anndata.obs_names, key
-        )
-    soma._add_object(soma.obsp)
+#    soma.obsp.create_unless_exists()
+#    for key in anndata.obsp.keys():
+#        soma.obsp.add_matrix_from_matrix_and_dim_values(
+#            anndata.obsp[key], anndata.obs_names, key
+#        )
+#    soma._add_object(soma.obsp)
 
-    soma.varp.create_unless_exists()
-    for key in anndata.varp.keys():
-        soma.varp.add_matrix_from_matrix_and_dim_values(
-            anndata.varp[key], anndata.var_names, key
-        )
-    soma._add_object(soma.varp)
+#    soma.varp.create_unless_exists()
+#    for key in anndata.varp.keys():
+#        soma.varp.add_matrix_from_matrix_and_dim_values(
+#            anndata.varp[key], anndata.var_names, key
+#        )
+#    soma._add_object(soma.varp)
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if anndata.raw is not None:
-        soma.raw.from_anndata(anndata)
-        soma._add_object(soma.raw)
+#    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#    if anndata.raw is not None:
+#        soma.raw.from_anndata(anndata)
+#        soma._add_object(soma.raw)
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if anndata.uns is not None:
-        soma.uns.from_anndata_uns(anndata.uns)
-        soma._add_object(soma.uns)
+#    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#    if anndata.uns is not None:
+#        soma.uns.from_anndata_uns(anndata.uns)
+#        soma._add_object(soma.uns)
 
     log_io(
         f"Wrote {soma.nested_name}",
