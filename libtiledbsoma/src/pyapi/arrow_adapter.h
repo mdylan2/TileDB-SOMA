@@ -125,7 +125,8 @@ class ArrowAdapter {
             case TILEDB_BLOB:
                 return "Z";  // large because TileDB uses 64bit offsets
             case TILEDB_BOOL:
-                return "C";  // TILEDB_BOOL is 8bit but arrow BOOL is 1bit
+                // XXX TEMP return "C";  // TILEDB_BOOL is 8bit but arrow BOOL is 1bit
+                return "b";
             case TILEDB_INT32:
                 return "i";
             case TILEDB_INT64:

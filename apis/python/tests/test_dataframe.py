@@ -14,12 +14,13 @@ def test_dataframe_non_indexed(tmp_path):
             ("foo", pa.int32()),
             ("bar", pa.float64()),
             ("baz", pa.large_string()),
+            ("quux", pa.bool_()),
         ]
     )
     sdf.create(schema=asch)
 
     assert sorted(sdf.schema.names) == sorted(
-        ["foo", "bar", "baz", "soma_rowid", "soma_joinid"]
+        ["foo", "bar", "baz", "quux", "soma_rowid", "soma_joinid"]
     )
     assert sorted(sdf.keys()) == sorted(sdf.schema.names)
 
@@ -32,6 +33,7 @@ def test_dataframe_non_indexed(tmp_path):
         pydict["foo"] = [10, 20, 30, 40, 50]
         pydict["bar"] = [4.1, 5.2, 6.3, 7.4, 8.5]
         pydict["baz"] = ["apple", "ball", "cat", "dog", "egg"]
+        pydict["quux"] = [True, False, False, False, True]
         rb = pa.Table.from_pydict(pydict)
         sdf.write(rb)
 
@@ -41,13 +43,14 @@ def test_dataframe_non_indexed(tmp_path):
     assert table.num_rows == 5
 
     # We should be getting back the soma_rowid & soma_joinid column as well
-    assert table.num_columns == 5
+    assert table.num_columns == 6
 
     assert [e.as_py() for e in list(table["soma_rowid"])] == [0, 1, 2, 3, 4]
     assert [e.as_py() for e in list(table["soma_joinid"])] == [101, 102, 103, 104, 105]
     assert [e.as_py() for e in list(table["foo"])] == pydict["foo"]
     assert [e.as_py() for e in list(table["bar"])] == pydict["bar"]
     assert [e.as_py() for e in list(table["baz"])] == pydict["baz"]
+    assert [e.as_py() for e in list(table["quux"])] == pydict["quux"]
 
     # ----------------------------------------------------------------
     # Read by ids
@@ -64,6 +67,7 @@ def test_dataframe_non_indexed(tmp_path):
     assert sorted([e.as_py() for e in list(table["foo"])]) == [20, 30]
     assert sorted([e.as_py() for e in list(table["bar"])]) == [5.2, 6.3]
     assert sorted([e.as_py() for e in list(table["baz"])]) == ["ball", "cat"]
+    assert sorted([e.as_py() for e in list(table["quux"])]) == [False, False]
 
     # ----------------------------------------------------------------
     # Read by ids
@@ -77,6 +81,7 @@ def test_dataframe_non_indexed(tmp_path):
     assert sorted([e.as_py() for e in list(table["foo"])]) == [20, 30]
     assert sorted([e.as_py() for e in list(table["bar"])]) == [5.2, 6.3]
     assert sorted([e.as_py() for e in list(table["baz"])]) == ["ball", "cat"]
+    assert sorted([e.as_py() for e in list(table["quux"])]) == [False, False]
 
     # ----------------------------------------------------------------
     # Read by ids
@@ -90,6 +95,7 @@ def test_dataframe_non_indexed(tmp_path):
     assert sorted([e.as_py() for e in list(table["foo"])]) == [20, 40]
     assert sorted([e.as_py() for e in list(table["bar"])]) == [5.2, 7.4]
     assert sorted([e.as_py() for e in list(table["baz"])]) == ["ball", "dog"]
+    assert sorted([e.as_py() for e in list(table["quux"])]) == [False, False]
 
     # ----------------------------------------------------------------
     # Read by value_filter
@@ -103,6 +109,7 @@ def test_dataframe_non_indexed(tmp_path):
     assert sorted([e.as_py() for e in list(table["foo"])]) == [20, 40]
     assert sorted([e.as_py() for e in list(table["bar"])]) == [5.2, 7.4]
     assert sorted([e.as_py() for e in list(table["baz"])]) == ["ball", "dog"]
+    assert sorted([e.as_py() for e in list(table["quux"])]) == [False, False]
 
     # ----------------------------------------------------------------
     # Read by value_filter
@@ -116,6 +123,7 @@ def test_dataframe_non_indexed(tmp_path):
     assert sorted([e.as_py() for e in list(table["foo"])]) == [20, 40]
     assert sorted([e.as_py() for e in list(table["bar"])]) == [5.2, 7.4]
     assert sorted([e.as_py() for e in list(table["baz"])]) == ["ball", "dog"]
+    assert sorted([e.as_py() for e in list(table["quux"])]) == [False, False]
 
 
 @pytest.fixture
