@@ -69,6 +69,11 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "--skipuns",
+        help="Don't ingest the `uns` structure",
+        action="store_true",
+    )
+    parser.add_argument(
         "-r",
         "--relative",
         help="""
@@ -151,6 +156,7 @@ select `relative=True`. (This is the default.)
                 soma_options,
                 write_soco,
                 outdir,
+                skip_uns=args.skipuns,
             )
     else:
         if len(args.paths) == 0:
@@ -163,6 +169,7 @@ select `relative=True`. (This is the default.)
                 soma_options,
                 write_soco,
                 outdir,
+                skip_uns=args.skipuns,
             )
         elif len(args.paths) == 1:
             input_path = args.paths[0]
@@ -177,6 +184,7 @@ select `relative=True`. (This is the default.)
                 soma_options,
                 write_soco,
                 outdir,
+                skip_uns=args.skipuns,
             )
         elif len(args.paths) == 2:
             input_path = args.paths[0]
@@ -188,6 +196,7 @@ select `relative=True`. (This is the default.)
                 soma_options,
                 write_soco,
                 outdir,
+                skip_uns=args.skipuns,
             )
         else:
             parser.print_help(file=sys.stderr)
@@ -202,6 +211,7 @@ def ingest_one(
     soma_options: tiledbsoma.SOMAOptions,
     write_soco: bool,
     soco_dir: str,
+    skip_uns: bool,
 ):
     # Check that the input exists.
     vfs = tiledb.VFS()
@@ -261,7 +271,7 @@ def ingest_one(
                     "Internal coding error in --ifexists handling.", ifexists, "<"
                 )
         # Do the ingest into TileDB.
-        tiledbsoma.io.from_h5ad(soma, input_path)
+        tiledbsoma.io.from_h5ad(soma, input_path, skip_uns=skip_uns)
 
     tiledbsoma.logging.logger.info(f"Wrote {output_path}")
 

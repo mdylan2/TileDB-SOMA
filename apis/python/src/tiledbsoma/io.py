@@ -32,14 +32,17 @@ def from_h5ad_unless_exists(
 
 # ----------------------------------------------------------------
 def from_h5ad(
-    soma: tiledbsoma.SOMA, input_path: Path, X_layer_name: str = "data"
+    soma: tiledbsoma.SOMA,
+    input_path: Path,
+    X_layer_name: str = "data",
+    skip_uns: bool = False,
 ) -> None:
     """
     Reads an ``.h5ad`` local-disk file and writes to a TileDB SOMA structure.
     """
     if isinstance(input_path, ad.AnnData):
         raise Exception("Input path is an AnnData object -- did you want from_anndata?")
-    _from_h5ad_common(soma, input_path, _from_anndata_aux, X_layer_name)
+    _from_h5ad_common(soma, input_path, _from_anndata_aux, X_layer_name, skip_uns)
 
 
 # ----------------------------------------------------------------
@@ -57,6 +60,7 @@ def _from_h5ad_common(
     input_path: Path,
     handler_func: Callable[[tiledbsoma.SOMA, ad.AnnData, str], None],
     X_layer_name: str,
+    skip_uns: bool,
 ) -> None:
     """
     Common code for things we do when processing a .h5ad file for ingest/update.
@@ -74,7 +78,7 @@ def _from_h5ad_common(
         tiledbsoma.util.format_elapsed(s, f"{soma._indent}FINISH READING {input_path}"),
     )
 
-    handler_func(soma, anndata, X_layer_name)
+    handler_func(soma, anndata, X_layer_name, skip_uns)
 
     log_io(
         None,
@@ -99,7 +103,10 @@ def from_10x_unless_exists(soma: tiledbsoma.SOMA, input_path: Path) -> None:
 
 
 def from_10x(
-    soma: tiledbsoma.SOMA, input_path: Path, X_layer_name: str = "data"
+    soma: tiledbsoma.SOMA,
+    input_path: Path,
+    X_layer_name: str = "data",
+    skip_uns: bool = False,
 ) -> None:
     """
     Reads a 10X file and writes to a TileDB group structure.
@@ -116,7 +123,7 @@ def from_10x(
         tiledbsoma.util.format_elapsed(s, f"{soma._indent}FINISH READING {input_path}"),
     )
 
-    _from_anndata_aux(soma, anndata, X_layer_name)
+    _from_anndata_aux(soma, anndata, X_layer_name, skip_uns)
 
     log_io(
         None,
@@ -128,7 +135,10 @@ def from_10x(
 
 # ----------------------------------------------------------------
 def from_anndata_unless_exists(
-    soma: tiledbsoma.SOMA, anndata: ad.AnnData, X_layer_name: str = "data"
+    soma: tiledbsoma.SOMA,
+    anndata: ad.AnnData,
+    X_layer_name: str = "data",
+    skip_uns: bool = False,
 ) -> None:
     """
     Skips the ingest if the SOMA is already there. A convenient keystroke-saver
@@ -139,23 +149,27 @@ def from_anndata_unless_exists(
             f"Already exists, skipping ingest: {soma.nested_name}"
         )
     else:
-        _from_anndata_aux(soma, anndata, X_layer_name)
+        _from_anndata_aux(soma, anndata, X_layer_name, skip_uns)
 
 
 # ----------------------------------------------------------------
 def from_anndata(
-    soma: tiledbsoma.SOMA, anndata: ad.AnnData, X_layer_name: str = "data"
+    soma: tiledbsoma.SOMA,
+    anndata: ad.AnnData,
+    X_layer_name: str = "data",
+    skip_uns: bool = False,
 ) -> None:
     """
     Given an in-memory ``AnnData`` object, writes to a TileDB SOMA structure.
     """
-    return _from_anndata_aux(soma, anndata, X_layer_name)
+    return _from_anndata_aux(soma, anndata, X_layer_name, skip_uns)
 
 
 def _from_anndata_aux(
     soma: tiledbsoma.SOMA,
     anndata: ad.AnnData,
     X_layer_name: str,
+    skip_uns: bool,
 ) -> None:
     """
     Helper method for ``from_anndata``. This simplified type-checking using ``mypy`` with regard to
@@ -307,7 +321,7 @@ def _from_anndata_aux(
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Already parallelized recursively
-    if anndata.uns is not None:
+    if anndata.uns is not None and not skip_uns:
         soma.uns.from_anndata_uns(anndata.uns)
         soma._add_object(soma.uns)
 
