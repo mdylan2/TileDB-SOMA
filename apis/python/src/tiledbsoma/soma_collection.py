@@ -243,6 +243,7 @@ class SOMACollection(TileDBGroup):
         var_query_string: Optional[str] = None,
         var_ids: Optional[Ids] = None,
         X_layer_names: Optional[Sequence[str]] = None,
+        output_obj_names=("obs", "var", "X"),
         return_arrow: bool = False,
     ) -> List[SOMASlice]:
         """
@@ -274,6 +275,7 @@ class SOMACollection(TileDBGroup):
             var_query_string=var_query_string,
             var_ids=var_ids,
             X_layer_names=X_layer_names,
+            output_obj_names=output_obj_names,
             return_arrow=return_arrow,
         )
 

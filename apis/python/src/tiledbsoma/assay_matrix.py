@@ -78,28 +78,28 @@ class AssayMatrix(TileDBArray):
     # ----------------------------------------------------------------
     def dim_select(
         self,
-        obs_ids: Optional[Ids],
-        var_ids: Optional[Ids],
+        row_ids: Optional[Ids],
+        col_ids: Optional[Ids],
         *,
         return_arrow: bool = False,
     ) -> Union[pd.DataFrame, pa.Table]:
         """
-        Selects a slice out of the matrix with specified ``obs_ids`` and/or ``var_ids``.
+        Selects a slice out of the matrix with specified ``row_ids`` and/or ``col_ids``.
         Either or both of the ID lists may be ``None``, meaning, do not subselect along
         that dimension. If both ID lists are ``None``, the entire matrix is returned.
         """
         with tiledb.open(self.uri, ctx=self._ctx) as A:
             query = A.query(return_arrow=return_arrow)
-            if obs_ids is None:
-                if var_ids is None:
+            if row_ids is None:
+                if col_ids is None:
                     df = query.df[:, :]
                 else:
-                    df = query.df[:, var_ids]
+                    df = query.df[:, col_ids]
             else:
-                if var_ids is None:
-                    df = query.df[obs_ids, :]
+                if col_ids is None:
+                    df = query.df[row_ids, :]
                 else:
-                    df = query.df[obs_ids, var_ids]
+                    df = query.df[row_ids, col_ids]
 
         if not return_arrow:
             df.set_index([self.row_dim_name, self.col_dim_name], inplace=True)
@@ -109,51 +109,51 @@ class AssayMatrix(TileDBArray):
     # ----------------------------------------------------------------
     def df(
         self,
-        obs_ids: Optional[Ids] = None,
-        var_ids: Optional[Ids] = None,
+        row_ids: Optional[Ids] = None,
+        col_ids: Optional[Ids] = None,
         *,
         return_arrow: bool = False,
     ) -> Union[pd.DataFrame, pa.Table]:
         """
-        Keystroke-saving alias for ``.dim_select()``. If either of ``obs_ids`` or ``var_ids``
+        Keystroke-saving alias for ``.dim_select()``. If either of ``row_ids`` or ``col_ids``
         are provided, they're used to subselect; if not, the entire dataframe is returned.
         """
-        return self.dim_select(obs_ids, var_ids, return_arrow=return_arrow)
+        return self.dim_select(row_ids, col_ids, return_arrow=return_arrow)
 
     # ----------------------------------------------------------------
     def csr(
-        self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None
+        self, row_ids: Optional[Ids] = None, col_ids: Optional[Ids] = None
     ) -> sp.csr_matrix:
         """
         Like ``.df()`` but returns results in ``scipy.sparse.csr_matrix`` format.
         """
-        return self._csr_or_csc("csr", obs_ids, var_ids)
+        return self._csr_or_csc("csr", row_ids, col_ids)
 
     def csc(
-        self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None
+        self, row_ids: Optional[Ids] = None, col_ids: Optional[Ids] = None
     ) -> sp.csc_matrix:
         """
         Like ``.df()`` but returns results in ``scipy.sparse.csc_matrix`` format.
         """
-        return self._csr_or_csc("csc", obs_ids, var_ids)
+        return self._csr_or_csc("csc", row_ids, col_ids)
 
     def _csr_or_csc(
         self,
         return_as: str,
-        obs_ids: Optional[Ids] = None,
-        var_ids: Optional[Ids] = None,
+        row_ids: Optional[Ids] = None,
+        col_ids: Optional[Ids] = None,
     ) -> Union[sp.csr_matrix, sp.csc_matrix]:
         """
         Helper method for ``csr`` and ``csc``.
         """
         assert return_as in ("csr", "csc")
         return util.X_and_ids_to_sparse_matrix(
-            self.dim_select(obs_ids, var_ids),
+            self.dim_select(row_ids, col_ids),
             self.row_dim_name,
             self.col_dim_name,
             self.attr_name,
-            row_labels=obs_ids or self.row_dataframe.ids(),
-            col_labels=var_ids or self.col_dataframe.ids(),
+            row_labels=row_ids or self.row_dataframe.ids(),
+            col_labels=col_ids or self.col_dataframe.ids(),
             return_as=return_as,
         )
 
@@ -377,7 +377,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (i2 - 1) / nrow)
                 log_io(
                     None,
-                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), obs_ids %s..%s, nnz=%d"
+                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), row_ids %s..%s, nnz=%d"
                     % (
                         self._indent,
                         i,
@@ -483,7 +483,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (j2 - 1) / ncol)
                 log_io(
                     None,
-                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), var_ids %s..%s, nnz=%d"
+                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), col_ids %s..%s, nnz=%d"
                     % (
                         self._indent,
                         j,
@@ -591,7 +591,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (i2 - 1) / nrow)
                 log_io(
                     None,
-                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), obs_ids %s..%s, nnz=%d"
+                    "%sSTART  chunk rows %d..%d of %d (%.3f%%), row_ids %s..%s, nnz=%d"
                     % (
                         self._indent,
                         i,

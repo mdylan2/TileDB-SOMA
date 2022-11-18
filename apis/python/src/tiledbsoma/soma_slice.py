@@ -26,31 +26,29 @@ class SOMASlice(TileDBGroup):
         obs: Union[pd.DataFrame, pa.Table],
         var: Union[pd.DataFrame, pa.Table],
         # TODO
-        # obsm: Dict[str, pd.DataFrame],
-        # varm: Dict[str, pd.DataFrame],
-        # obsp: Dict[str, pd.DataFrame],
-        # varp: Dict[str, pd.DataFrame],
+        obsm: Optional[Dict[str, pd.DataFrame]],
+        varm: Optional[Dict[str, pd.DataFrame]],
+        obsp: Optional[Dict[str, pd.DataFrame]],
+        varp: Optional[Dict[str, pd.DataFrame]],
         # raw_X: Dict[str, pd.DataFrame],
         # raw_var: pd.DataFrame,
     ):
         """
         Constructs an in-memory ``SOMASlice`` object. This is a simple collection of obs, var, and X dataframes.
         """
-        assert isinstance(obs, pd.DataFrame) or isinstance(obs, pa.Table)
-        assert isinstance(var, pd.DataFrame) or isinstance(obs, pa.Table)
-        assert "data" in X
+        assert obs is None or isinstance(obs, pd.DataFrame) or isinstance(obs, pa.Table)
+        assert var is None or isinstance(var, pd.DataFrame) or isinstance(obs, pa.Table)
+        assert X is None or isinstance(X, dict)
 
         self.obs = obs
         self.var = var
         self.X = X
-        # TODO
-        # self.obsm = obsm
-        # self.varm = varm
-        # self.obsp = obsp
-        # self.varp = varp
+        self.obsm = obsm
+        self.varm = varm
+        self.obsp = obsp
+        self.varp = varp
         # self.raw_X = raw_X
         # self.raw_var = raw_var
-        assert "data" in X
 
     # ----------------------------------------------------------------
     def __repr__(self) -> str:
@@ -59,10 +57,27 @@ class SOMASlice(TileDBGroup):
         """
 
         lines = []
-        for key in self.X.keys():
-            lines.append(f"X/{key}: {self.X[key].shape}")
-        lines.append(f"obs: {self.obs.shape}")
-        lines.append(f"var: {self.var.shape}")
+
+        if self.X is not None:
+            for key in self.X.keys():
+                lines.append(f"X/{key}: {self.X[key].shape}")
+        if self.obs is not None:
+            lines.append(f"obs: {self.obs.shape}")
+        if self.var is not None:
+            lines.append(f"var: {self.var.shape}")
+
+        if self.obsm is not None:
+            for key in self.obsm.keys():
+                lines.append(f'obsm["{key}"]: {self.obsm[key].shape}')
+        if self.obsp is not None:
+            for key in self.obsp.keys():
+                lines.append(f'obsp["{key}"]: {self.obsp[key].shape}')
+        if self.varm is not None:
+            for key in self.varm.keys():
+                lines.append(f'varm["{key}"]: {self.varm[key].shape}')
+        if self.varp is not None:
+            for key in self.varp.keys():
+                lines.append(f'varp["{key}"]: {self.varp[key].shape}')
 
         return "\n".join(lines)
 
@@ -259,5 +274,8 @@ class SOMASlice(TileDBGroup):
         for name in annc.layers:
             X[name] = annc.layers[name]
 
-        retval = cls(X=X, obs=annc.obs, var=annc.var)
+        # XXX TEMP
+        retval = cls(
+            X=X, obs=annc.obs, var=annc.var, obsm={}, obsp={}, varm={}, varp={}
+        )
         return retval

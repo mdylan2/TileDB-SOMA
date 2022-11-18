@@ -311,6 +311,7 @@ class SOMA(TileDBGroup):
         var_query_string: Optional[str] = None,
         var_ids: Optional[Ids] = None,
         X_layer_names: Optional[Sequence[str]] = None,
+        output_obj_names: Tuple[str, ...] = ("obs", "var", "X"),
         return_arrow: bool = False,
     ) -> Optional[SOMASlice]:
         """
@@ -335,6 +336,7 @@ class SOMA(TileDBGroup):
             var_query_string=var_query_string,
             var_ids=var_ids,
             X_layer_names=X_layer_names,
+            output_obj_names=output_obj_names,
             return_arrow=return_arrow,
         )
         return retval
@@ -343,14 +345,15 @@ class SOMA(TileDBGroup):
     def _query_aux(
         self,
         *,
-        obs_attrs: Optional[Sequence[str]] = None,
-        obs_query_string: Optional[str] = None,
-        obs_ids: Optional[Ids] = None,
-        var_attrs: Optional[Sequence[str]] = None,
-        var_query_string: Optional[str] = None,
-        var_ids: Optional[Ids] = None,
-        X_layer_names: Optional[Sequence[str]] = None,
-        return_arrow: bool = False,
+        obs_attrs: Optional[Sequence[str]],
+        obs_query_string: Optional[str],
+        obs_ids: Optional[Ids],
+        var_attrs: Optional[Sequence[str]],
+        var_query_string: Optional[str],
+        var_ids: Optional[Ids],
+        X_layer_names: Optional[Sequence[str]],
+        output_obj_names: Sequence[str],
+        return_arrow: bool,
     ) -> Optional[SOMASlice]:
         """
         Helper method for `query`: as this has multiple `return` statements, it's easiest to track
@@ -403,6 +406,7 @@ class SOMA(TileDBGroup):
             slice_obs_df,
             slice_var_df,
             X_layer_names=X_layer_names,
+            output_obj_names=output_obj_names,
             return_arrow=return_arrow,
         )
 
@@ -410,10 +414,10 @@ class SOMA(TileDBGroup):
     def _query_aux_obs(
         self,
         *,
-        obs_attrs: Optional[Sequence[str]] = None,
-        obs_query_string: Optional[str] = None,
-        obs_ids: Optional[Ids] = None,
-        return_arrow: bool = False,
+        obs_attrs: Optional[Sequence[str]],
+        obs_query_string: Optional[str],
+        obs_ids: Optional[Ids],
+        return_arrow: bool,
     ) -> Any:  # Optional[SOMASlice]:
         """
         TODO
@@ -455,10 +459,10 @@ class SOMA(TileDBGroup):
     def _query_aux_var(
         self,
         *,
-        var_attrs: Optional[Sequence[str]] = None,
-        var_query_string: Optional[str] = None,
-        var_ids: Optional[Ids] = None,
-        return_arrow: bool = False,
+        var_attrs: Optional[Sequence[str]],
+        var_query_string: Optional[str],
+        var_ids: Optional[Ids],
+        return_arrow: bool,
     ) -> Any:  # Optional[SOMASlice]:
         """
         TODO
@@ -499,6 +503,7 @@ class SOMA(TileDBGroup):
         var_query_string: Optional[str] = None,
         var_ids: Optional[Ids] = None,
         X_layer_names: Optional[Sequence[str]] = None,
+        output_obj_names=("obs", "var", "X"),
         return_arrow: bool = False,
         max_thread_pool_workers: Optional[int] = None,
     ) -> List[SOMASlice]:
@@ -551,6 +556,7 @@ class SOMA(TileDBGroup):
                     obs_ids=obs_ids,
                     var_ids=var_ids,
                     X_layer_names=X_layer_names,
+                    output_obj_names=output_obj_names,
                     return_arrow=return_arrow,
                 )
                 soma_slice_futures.append(soma_slice_future)
@@ -582,7 +588,8 @@ class SOMA(TileDBGroup):
         slice_var_df: Union[pd.DataFrame, pa.Table],
         *,
         return_arrow: bool = False,
-        X_layer_names: Optional[Sequence[str]] = None,
+        X_layer_names: Optional[Sequence[str]],
+        output_obj_names: Sequence[str],
     ) -> SOMASlice:
         """
         An internal method for constructing a ``SOMASlice`` object given query results.
@@ -590,32 +597,90 @@ class SOMA(TileDBGroup):
         # There aren't always multiple X layers, and if there aren't, this parallelization doesn't
         # help. But neither does it hurt. And if there are, that's good news, since the dim_select is
         # in TileDB's C++ core engine which releases the GIL.
-        futures = []
-        if X_layer_names is None:
-            X_layer_names = self.X.keys()
-        with ThreadPoolExecutor(
-            max_workers=self._soma_options.max_thread_pool_workers
-        ) as executor:
-            for X_layer_name in X_layer_names:
-                X_layer = self.X[X_layer_name]
-                if X_layer is not None:
-                    future = executor.submit(
-                        self._assemble_soma_slice_aux,
-                        X_layer_name,
-                        X_layer,
-                        obs_ids,
-                        var_ids,
-                        return_arrow=return_arrow,
-                    )
-                    futures.append(future)
 
-        X = {}
-        for future in futures:
-            X_layer_name, df = future.result()
-            assert df is not None
-            X[X_layer_name] = df
+        if "obs" in output_obj_names:
+            obs_for_output = slice_obs_df
+        else:
+            obs_for_output = None
 
-        return SOMASlice(X=X, obs=slice_obs_df, var=slice_var_df)
+        if "var" in output_obj_names:
+            var_for_output = slice_var_df
+        else:
+            var_for_output = None
+
+        if "X" in output_obj_names:
+            futures = []
+            if X_layer_names is None:
+                X_layer_names = self.X.keys()
+            with ThreadPoolExecutor(
+                max_workers=self._soma_options.max_thread_pool_workers
+            ) as executor:
+                for X_layer_name in X_layer_names:
+                    X_layer = self.X[X_layer_name]
+                    if X_layer is not None:
+                        future = executor.submit(
+                            self._assemble_soma_slice_aux,
+                            X_layer_name,
+                            X_layer,
+                            obs_ids,
+                            var_ids,
+                            return_arrow=return_arrow,
+                        )
+                        futures.append(future)
+            X = {}
+            for future in futures:
+                X_layer_name, df = future.result()
+                assert df is not None
+                X[X_layer_name] = df
+        else:
+            X = None
+
+        if "obsm" in output_obj_names:
+            # XXX futurize
+            obsm = {}
+            for key in self.obsm.keys():
+                obsm[key] = self.obsm[key].dim_select(
+                    ids=obs_ids, return_arrow=return_arrow
+                )
+        else:
+            obsm = None
+
+        if "obsp" in output_obj_names:
+            obsp = {}
+            for key in self.obsp.keys():
+                obsp[key] = self.obsp[key].dim_select(
+                    row_ids=obs_ids, col_ids=obs_ids, return_arrow=return_arrow
+                )
+        else:
+            obsp = None
+
+        if "varm" in output_obj_names:
+            varm = {}
+            for key in self.varm.keys():
+                varm[key] = self.varm[key].dim_select(
+                    ids=var_ids, return_arrow=return_arrow
+                )
+        else:
+            varm = None
+
+        if "varp" in output_obj_names:
+            varp = {}
+            for key in self.varp.keys():
+                varp[key] = self.varp[key].dim_select(
+                    row_ids=var_ids, col_ids=var_ids, return_arrow=return_arrow
+                )
+        else:
+            varp = None
+
+        return SOMASlice(
+            X=X,
+            obs=obs_for_output,
+            var=var_for_output,
+            obsm=obsm,
+            obsp=obsp,
+            varm=varm,
+            varp=varp,
+        )
 
     # ----------------------------------------------------------------
     @classmethod
