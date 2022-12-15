@@ -1,5 +1,5 @@
 test_that("TileDBArray helper functions", {
-  uri <- withr::local_tempdir(pattern = "test-array")
+  uri <- withr::local_tempdir(pattern = "test-array1")
 
   expect_message(
     tdb <- TileDBArray$new(uri = uri, verbose = TRUE),
@@ -82,4 +82,25 @@ test_that("TileDBArray helper functions", {
   # reset attribute filter
   tdb$reset_query()
   expect_length(tdb$object[]$Admit, nrow(df))
+
+  # perform another write to create a new fragment
+  tiledb::fromDataFrame(df, uri, col_index = index_cols, mode = "append")
+  expect_equal(tdb$fragment_count(), 2)
+
+  # consolidate fragment_meta
+  tdb$consolidate(mode = "fragment_meta")
+  expect_length(dir(file.path(tdb$uri, "__fragment_meta")), 1)
+
+  # consolidate one more time to create another .con file
+  expect_length(dir(file.path(tdb$uri, "__fragment_meta")), 2)
+  tdb$vacuum(mode = "fragment_meta")
+  expect_length(dir(file.path(tdb$uri, "__fragment_meta")), 1)
+
+  # consolidate and vacuum commits
+  expect_length(dir(file.path(tdb$uri, "__commits")), 2)
+  tdb$consolidate(mode = "commits")
+  expect_length(dir(file.path(tdb$uri, "__commits"), pattern = "con$"), 1)
+
+  tdb$vacuum(mode = "commits")
+  expect_length(dir(file.path(tdb$uri, "__commits")), 1)
 })

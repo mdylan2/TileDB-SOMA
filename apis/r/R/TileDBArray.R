@@ -228,6 +228,38 @@ TileDBArray <- R6::R6Class(
           "tiledb_query_condition"
         )
       }
+    },
+
+    #' @description Consolidate
+    #' @param mode A character string specifying the consolidation mode, either
+    #' "fragment_meta" (default), "commits", or "fragments".
+    consolidate = function(mode = "fragment_meta") {
+      mode <- match.arg(mode, c("fragment_meta", "commits", "fragments"))
+
+      # add consolidation mode to existing context
+      cfg <- tiledb::config(self$ctx)
+      cfg["sm.consolidation.mode"] <- mode
+
+      if (self$verbose) {
+        message(sprintf("Consolidating %s's '%s'", self$class(), mode))
+      }
+      tiledb::array_consolidate(self$uri, cfg = cfg)
+    },
+
+    #' @description Vacuum
+    #' @param mode A character string specifying the vacuum mode, either
+    #' "fragment_meta" (default), "commits", or "fragments".
+    vacuum = function(mode = "fragment_meta") {
+      mode <- match.arg(mode, c("fragment_meta", "commits", "fragments"))
+
+      # add vacuum mode to existing context
+      cfg <- tiledb::config(self$ctx)
+      cfg["sm.vacuum.mode"] <- mode
+
+      if (self$verbose) {
+        message(sprintf("Vacuuming %s's '%s'", self$class(), mode))
+      }
+      tiledb::array_vacuum(self$uri, cfg = cfg)
     }
   ),
 
