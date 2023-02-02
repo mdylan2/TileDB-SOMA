@@ -1,6 +1,6 @@
 """Abstractions to more easily manage read and write access to TileDB data.
 
-``ArrayHandle.open`` and ``GroupHandle.open`` are the two things most important
+``ArrayWrapper.open`` and ``GroupWrapper.open`` are the two things most important
 to callers.
 """
 

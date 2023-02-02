@@ -112,6 +112,8 @@ class TileDBArray(TileDBObject[handles.ArrayWrapper]):
         the newly-created array, open for writing.
         """
         tiledb.Array.create(uri, schema, ctx=context.tiledb_ctx)
-        handle = handles.ArrayWrapper.open(uri, "w", context)
-        cls._set_create_metadata(handle)
-        return handle
+        # Since the SOMA object type data on a newly-created array is immutable,
+        # we set it at the very start of time to avoid timestamp issues.
+        with tiledb.open(uri, "w", timestamp=0, ctx=context.tiledb_ctx) as meta_writer:
+            cls._set_create_metadata(meta_writer)
+        return handles.ArrayWrapper.open(uri, "w", context)

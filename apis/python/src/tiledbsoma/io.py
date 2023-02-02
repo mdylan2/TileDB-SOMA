@@ -788,7 +788,6 @@ def _write_matrix_to_sparseNDArray(
     storage_ned = None
     if ingest_mode == "resume":
         # This lets us check for already-ingested chunks, when in resume-ingest mode.
-        # THIS IS A HACK AND ONLY WORKS BECAUSE WE ARE DOING THIS BEFORE ALL WRITES.
         storage_ned = _read_nonempty_domain(soma_ndarray)
         matrix_bounds = [
             (0, int(n - 1)) for n in matrix.shape

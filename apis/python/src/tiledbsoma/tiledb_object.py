@@ -103,9 +103,9 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType_co]):
         return self._handle.mode
 
     @classmethod
-    def _set_create_metadata(cls, handle: handles.AnyWrapper) -> None:
+    def _set_create_metadata(cls, handle: handles.RawHandle) -> None:
         """Sets the necessary metadata on a newly-created TileDB object."""
-        handle.writer.meta.update(
+        handle.meta.update(
             {
                 constants.SOMA_OBJECT_TYPE_METADATA_KEY: cls.soma_type,
                 constants.SOMA_ENCODING_VERSION_METADATA_KEY: constants.SOMA_ENCODING_VERSION,

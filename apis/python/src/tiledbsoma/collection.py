@@ -79,9 +79,12 @@ class CollectionBase(
     ) -> _Self:
         context = context or SOMATileDBContext()
         tiledb.group_create(uri=uri, ctx=context.tiledb_ctx)
-        handle = handles.GroupWrapper.open(uri, "w", context)
-        cls._set_create_metadata(handle)
-        return cls(handle, _this_is_internal_only="tiledbsoma-internal-code")
+        with tiledb.Group(uri, "w", ctx=context.tiledb_ctx) as meta_writer:
+            cls._set_create_metadata(meta_writer)
+        return cls(
+            handles.GroupWrapper.open(uri, "w", context),
+            _this_is_internal_only="tiledbsoma-internal-code",
+        )
 
     @classmethod
     def open(
