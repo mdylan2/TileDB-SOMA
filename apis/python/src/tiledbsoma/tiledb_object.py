@@ -1,20 +1,22 @@
 from contextlib import ExitStack
-from typing import ClassVar, Generic, Type, TypeVar
+from typing import Any, ClassVar, Generic, MutableMapping, Type, TypeVar
 
 import somacore
 import tiledb
 from somacore import options
 
-from . import constants
-from .metadata_mapping import MetadataMapping
+from . import constants, handles
 from .options import SOMATileDBContext
-from .types import StorageType, TDBHandle
-from .util_tiledb import ReadWriteHandle
+from .types import StorageType
 
-_HandleType = TypeVar("_HandleType", bound=TDBHandle)
+_HandleType_co = TypeVar("_HandleType_co", bound=handles.AnyWrapper, covariant=True)
+"""The type of handle on a backend object that we have.
+
+Covariant because ``_handle`` is read-only.
+"""
 
 
-class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
+class TileDBObject(somacore.SOMAObject, Generic[_HandleType_co]):
     """
     Base class for ``TileDBArray`` and ``Collection``.
 
@@ -23,9 +25,11 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
     [lifecycle: experimental]
     """
 
+    __slots__ = ("_handle", "_close_stack", "_closed")
+
     def __init__(
         self,
-        handle: ReadWriteHandle[_HandleType],
+        handle: _HandleType_co,
         *,
         _this_is_internal_only: str = "unset",
     ):
@@ -43,7 +47,6 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
                 f" To create a new {name}, use the {name}.create class method."
             )
         self._handle = handle
-        self._metadata = MetadataMapping(self._handle)
         self._close_stack = ExitStack()
         """An exit stack to manage closing handles owned by this object.
 
@@ -55,7 +58,7 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
         self._closed = False
 
     _STORAGE_TYPE: StorageType
-    _tiledb_type: ClassVar[Type[TDBHandle]]
+    _tiledb_type: ClassVar[Type[handles.RawHandle]]
 
     @property
     def context(self) -> SOMATileDBContext:
@@ -66,11 +69,8 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
         return self.context.tiledb_ctx
 
     @property
-    def metadata(self) -> MetadataMapping:
-        # This needs to be implemented as a @property because Python's ABCs
-        # require that abstract properties be implemented on the object itself,
-        # rather than being a field (i.e., creating self.whatever in __init__).
-        return self._metadata
+    def metadata(self) -> MutableMapping[str, Any]:
+        return self._handle.metadata
 
     def __repr__(self) -> str:
         return f'{self.soma_type}(uri="{self.uri}")'
@@ -103,7 +103,7 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
         return self._handle.mode
 
     @classmethod
-    def _set_create_metadata(cls, handle: ReadWriteHandle[TDBHandle]) -> None:
+    def _set_create_metadata(cls, handle: handles.AnyWrapper) -> None:
         """Sets the necessary metadata on a newly-created TileDB object."""
         handle.writer.meta.update(
             {
@@ -111,12 +111,10 @@ class TileDBObject(somacore.SOMAObject, Generic[_HandleType]):
                 constants.SOMA_ENCODING_VERSION_METADATA_KEY: constants.SOMA_ENCODING_VERSION,
             }
         )
-        # HACK: We need this so that the metadata appears on the read handle.
-        handle._flush_hack()
 
     def _check_open_read(self) -> None:
         if self.mode != "r":
             raise ValueError(f"{self} is open for writing, not reading")
 
 
-AnyTileDBObject = TileDBObject[TDBHandle]
+AnyTileDBObject = TileDBObject[handles.AnyWrapper]

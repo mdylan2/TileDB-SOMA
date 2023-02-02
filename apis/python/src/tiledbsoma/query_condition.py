@@ -6,6 +6,7 @@ import numpy as np
 import tiledb
 
 import tiledbsoma.libtiledbsoma as qc
+
 from .libtiledbsoma import PyQueryCondition
 
 """

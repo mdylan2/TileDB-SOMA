@@ -7,15 +7,15 @@ from somacore import options
 # This package's pybind11 code
 import tiledbsoma.libtiledbsoma as clib
 
+from . import handles
 from .options.soma_tiledb_context import SOMATileDBContext
 from .tiledb_object import TileDBObject
 from .util_arrow import get_arrow_schema_from_tiledb_uri
-from .util_tiledb import ReadWriteHandle
 
 _Self = TypeVar("_Self", bound="TileDBArray")
 
 
-class TileDBArray(TileDBObject[tiledb.Array]):
+class TileDBArray(TileDBObject[handles.ArrayWrapper]):
     """
     Wraps arrays from TileDB-Py by retaining a URI, options, etc.  Also serves as an abstraction layer to hide TileDB-specific details from the API, unless requested.
 
@@ -35,9 +35,10 @@ class TileDBArray(TileDBObject[tiledb.Array]):
     ) -> _Self:
         del platform_config  # unused
         context = context or SOMATileDBContext()
-        handle = ReadWriteHandle.open_array(uri, mode, context)
-
-        return cls(handle, _this_is_internal_only="tiledbsoma-internal-code")
+        return cls(
+            handles.ArrayWrapper.open(uri, mode, context),
+            _this_is_internal_only="tiledbsoma-internal-code",
+        )
 
     _STORAGE_TYPE = "array"
 
@@ -52,7 +53,7 @@ class TileDBArray(TileDBObject[tiledb.Array]):
         """
         Returns the TileDB array schema. Not part of the SOMA API; for dev/debug/etc.
         """
-        return self._handle.reader.schema
+        return self._handle.schema
 
     def _tiledb_array_keys(self) -> Tuple[str, ...]:
         """
@@ -64,15 +65,15 @@ class TileDBArray(TileDBObject[tiledb.Array]):
         """
         Reads the dimension names from the schema: for example, ['obs_id', 'var_id'].
         """
-        arr = self._handle.reader
-        return tuple(arr.domain.dim(i).name for i in range(arr.domain.ndim))
+        domain = self._handle.schema.domain
+        return tuple(domain.dim(i).name for i in range(domain.ndim))
 
     def _tiledb_attr_names(self) -> Tuple[str, ...]:
         """
         Reads the attribute names from the schema: for example, the list of column names in a dataframe.
         """
-        arr = self._handle.reader
-        return tuple(arr.schema.attr(i).name for i in range(arr.schema.nattr))
+        schema = self._handle.schema
+        return tuple(schema.attr(i).name for i in range(schema.nattr))
 
     def _soma_reader(
         self,
@@ -103,7 +104,7 @@ class TileDBArray(TileDBObject[tiledb.Array]):
     @classmethod
     def _create_internal(
         cls, uri: str, schema: tiledb.ArraySchema, context: SOMATileDBContext
-    ) -> ReadWriteHandle[tiledb.Array]:
+    ) -> handles.ArrayWrapper:
         """Creates the TileDB Array for this type and returns an opened handle.
 
         This does the work of creating a TileDB Array with the provided schema
@@ -111,6 +112,6 @@ class TileDBArray(TileDBObject[tiledb.Array]):
         the newly-created array, open for writing.
         """
         tiledb.Array.create(uri, schema, ctx=context.tiledb_ctx)
-        handle = ReadWriteHandle.open_array(uri, "w", context)
+        handle = handles.ArrayWrapper.open(uri, "w", context)
         cls._set_create_metadata(handle)
         return handle

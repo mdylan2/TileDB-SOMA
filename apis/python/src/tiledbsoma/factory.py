@@ -13,6 +13,7 @@ from . import (
     dataframe,
     dense_nd_array,
     experiment,
+    handles,
     measurement,
     sparse_nd_array,
     tiledb_array,
@@ -25,9 +26,8 @@ from .constants import (
 )
 from .exception import DoesNotExistError, SOMAError
 from .options import SOMATileDBContext
-from .types import StorageType, TDBHandle
+from .types import StorageType
 from .util import typeguard_ignore
-from .util_tiledb import ReadWriteHandle
 
 _Obj = TypeVar("_Obj", bound="tiledb_object.AnyTileDBObject")
 _Arr = TypeVar("_Arr", bound="tiledb_array.TileDBArray")
@@ -140,7 +140,7 @@ def _open_array(
     soma_type: Optional[Type[_Arr]],
     context: SOMATileDBContext,
 ) -> _Arr:
-    handle = ReadWriteHandle.open_array(uri, mode, context)
+    handle = handles.ArrayWrapper.open(uri, mode, context)
     try:
         data_type = _read_soma_type(handle)
         cls = _to_array_class(data_type)
@@ -163,7 +163,7 @@ def _open_group(
     soma_type: Optional[Type[_Coll]],
     context: SOMATileDBContext,
 ) -> _Coll:
-    handle = ReadWriteHandle.open_group(uri, mode, context)
+    handle = handles.GroupWrapper.open(uri, mode, context)
     try:
         data_type = _read_soma_type(handle)
         cls = _to_group_class(data_type)
@@ -188,9 +188,9 @@ def _storage_of(cls: Type["tiledb_object.AnyTileDBObject"]) -> StorageType:
     raise TypeError(f"{cls} is not a concrete stored object")
 
 
-def _read_soma_type(hdl: ReadWriteHandle[TDBHandle]) -> str:
-    obj_type = hdl.reader.meta.get(SOMA_OBJECT_TYPE_METADATA_KEY)
-    encoding_version = hdl.reader.meta.get(SOMA_ENCODING_VERSION_METADATA_KEY)
+def _read_soma_type(hdl: handles.AnyWrapper) -> str:
+    obj_type = hdl.metadata.get(SOMA_OBJECT_TYPE_METADATA_KEY)
+    encoding_version = hdl.metadata.get(SOMA_ENCODING_VERSION_METADATA_KEY)
 
     if obj_type is None:
         raise SOMAError(

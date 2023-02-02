@@ -56,26 +56,24 @@ def test_metadata(soma_object):
         filter(lambda s: not s.startswith("soma_"), soma_object.metadata.keys())
     )
     assert keys == []
-    assert len(soma_object.metadata) == len(soma_object.metadata.keys())
-    assert len(soma_object.metadata) == len(soma_object.metadata.as_dict())
+    as_dict = dict(soma_object.metadata)
+    assert len(soma_object.metadata) == len(as_dict)
+    assert len(soma_object.metadata) == len(as_dict)
     assert "foobar" not in soma_object.metadata
 
     soma_object.metadata["foobar"] = True
-    soma_object._handle._flush_hack()
     assert "foobar" in soma_object.metadata
-    for k, v in soma_object.metadata.as_dict().items():
+    for k, v in soma_object.metadata.items():
         assert k in soma_object.metadata
         assert soma_object.metadata.get(k) == v
         assert soma_object.metadata[k] == v
 
     # also check set()
     soma_object.metadata["stay"] = "frosty"
-    soma_object._handle._flush_hack()
     assert "stay" in soma_object.metadata
     assert soma_object.metadata["stay"] == "frosty"
 
     del soma_object.metadata["stay"]
-    soma_object._handle._flush_hack()
     assert "stay" not in soma_object.metadata
     assert soma_object.metadata.get("stay", False) is False
 
@@ -101,7 +99,6 @@ def test_metadata_marshalling_OK(soma_object, test_value):
     which is any Arrow primitive and Arrow strings
     """
     soma_object.metadata["test_value"] = test_value
-    soma_object._handle._flush_hack()
     assert "test_value" in soma_object.metadata
 
     val = soma_object.metadata["test_value"]
