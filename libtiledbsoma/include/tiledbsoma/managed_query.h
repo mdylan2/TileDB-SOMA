@@ -95,10 +95,14 @@ class ManagedQuery {
     template <typename T>
     void select_ranges(
         const std::string& dim, const std::vector<std::pair<T, T>>& ranges) {
+        auto dims = non_empty_domain<T>(dim);
+        LOG_DEBUG(fmt::format("[ManagedQuery::select_ranges] dim={} domain=({},{}) ", dim, dims.first, dims.second));
         subarray_range_set_ = true;
         for (auto& [start, stop] : ranges) {
-            subarray_->add_range(dim, start, stop);
-            subarray_range_empty_ = false;
+            if (start >= dims.first && stop <= dims.second) {
+               subarray_->add_range(dim, start, stop);
+               subarray_range_empty_ = false;
+            }
         }
     }
 
@@ -111,10 +115,14 @@ class ManagedQuery {
      */
     template <typename T>
     void select_points(const std::string& dim, const std::vector<T>& points) {
+        auto dims = non_empty_domain<T>(dim);
+        LOG_DEBUG(fmt::format("[ManagedQuery::select_points] dim={} domain=({},{}) ", dim, dims.first, dims.second));
         subarray_range_set_ = true;
         for (auto& point : points) {
-            subarray_->add_range(dim, point, point);
-            subarray_range_empty_ = false;
+            if (point >= dims.first && point <= dims.second) {
+               subarray_->add_range(dim, point, point);
+               subarray_range_empty_ = false;
+            }
         }
     }
 
@@ -127,10 +135,14 @@ class ManagedQuery {
      */
     template <typename T>
     void select_points(const std::string& dim, const tcb::span<T> points) {
+        auto dims = non_empty_domain<T>(dim);
+        LOG_DEBUG(fmt::format("[ManagedQuery::select_points] dim={} domain=({},{}) ", dim, dims.first, dims.second));
         subarray_range_set_ = true;
         for (auto& point : points) {
-            subarray_->add_range(dim, point, point);
-            subarray_range_empty_ = false;
+            if (point >= dims.first && point <= dims.second) {
+                subarray_->add_range(dim, point, point);
+                subarray_range_empty_ = false;
+            }
         }
     }
 
@@ -143,9 +155,13 @@ class ManagedQuery {
      */
     template <typename T>
     void select_point(const std::string& dim, const T& point) {
+      auto dims = non_empty_domain<T>(dim);
+      LOG_DEBUG(fmt::format("[ManagedQuery::select_point] dim={} domain=({},{}) ", dim, dims.first, dims.second));
+      if (point >= dims.first && point <= dims.second) {
         subarray_->add_range(dim, point, point);
         subarray_range_set_ = true;
         subarray_range_empty_ = false;
+      }
     }
 
     /**
@@ -293,6 +309,19 @@ class ManagedQuery {
                 name));
         }
     }
+
+    /**
+     * @brief Return the non-empty domain for the named dimension
+     *
+     * @return std::pair<T,T>
+     * @tparam T Domain datatype
+     * @return Pair of [lower, upper] inclusive bounds.
+     */
+    template <typename T>
+    std::pair<T, T> non_empty_domain(const std::string& name) const {
+        return array_->non_empty_domain<T>(name);
+    }
+
 
     // TileDB array being queried.
     std::shared_ptr<Array> array_;
