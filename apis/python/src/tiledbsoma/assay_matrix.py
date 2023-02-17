@@ -31,6 +31,7 @@ class AssayMatrix(TileDBArray):
         col_dim_name: str,
         row_dataframe: AnnotationDataFrame,  # Nominally a reference to soma.obs
         col_dataframe: AnnotationDataFrame,  # Nominally a reference to soma.var
+        optimization_name: Optional[str] = None,
         *,
         parent: Optional[TileDBGroup] = None,
     ):
@@ -58,6 +59,7 @@ class AssayMatrix(TileDBArray):
         self.attr_name = "value"
         self.row_dataframe = row_dataframe
         self.col_dataframe = col_dataframe
+        self.optimization_name = optimization_name
 
     # ----------------------------------------------------------------
     def shape(self) -> Tuple[int, int]:
@@ -216,8 +218,7 @@ class AssayMatrix(TileDBArray):
         if self.exists():
             log_io(None, f"{self._indent}Re-using existing array {self.nested_name}")
         else:
-            for optimization in self._soma_options.array_types:
-                self._create_empty_array(matrix_dtype=matrix.dtype, optimization=optimization)
+            self._create_empty_array(matrix_dtype=matrix.dtype)
 
         if ingest_mode != "schema_only":
             if not self._soma_options.write_X_chunked:
@@ -238,7 +239,7 @@ class AssayMatrix(TileDBArray):
         )
 
     # ----------------------------------------------------------------
-    def _create_empty_array(self, matrix_dtype: np.dtype, optimization: str) -> None:
+    def _create_empty_array(self, matrix_dtype: np.dtype) -> None:
         """
         Create a TileDB 2D sparse array with string dimensions and a single attribute.
         """
@@ -272,9 +273,9 @@ class AssayMatrix(TileDBArray):
             sparse=True,
             allows_duplicates=False,
             offsets_filters=self._soma_options.X_data_offset_filters,
-            capacity=self._soma_options.__getattribute__(f"X__{optimization}__capacity"),
-            cell_order=self._soma_options.__getattribute__(f"X__{optimization}__cell_order"),
-            tile_order=self._soma_options.__getattribute__(f"X__{optimization}__tile_order"),
+            capacity=self._soma_options.__getattribute__(f"X__{self.optimization_name}__capacity"),
+            cell_order=self._soma_options.__getattribute__(f"X__{self.optimization_name}__cell_order"),
+            tile_order=self._soma_options.__getattribute__(f"X__{self.optimization_name}__tile_order"),
             ctx=self._ctx,
         )
 

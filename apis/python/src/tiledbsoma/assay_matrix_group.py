@@ -145,6 +145,7 @@ class AssayMatrixGroup(TileDBGroup):
         row_names: Labels,
         col_names: Labels,
         layer_name: str = "data",
+        optimization_name: Optional[str] = None,
         *,
         ingest_mode: str = "write",
     ) -> None:
@@ -155,6 +156,9 @@ class AssayMatrixGroup(TileDBGroup):
         be ``anndata.obs_names``; for ``varp elements, both will be ``anndata.var_names``.
         """
         assert ingest_mode in INGEST_MODES
+
+        if optimization_name is not None:
+            layer_name = f"{layer_name}__{optimization_name}"
 
         if matrix is not None:
             # Must be done first, to create the parent directory
@@ -170,6 +174,7 @@ class AssayMatrixGroup(TileDBGroup):
                 col_dim_name=self.col_dim_name,
                 row_dataframe=self.row_dataframe,
                 col_dataframe=self.col_dataframe,
+                optimization_name=optimization_name,
                 parent=self,
             )
             assay_matrix.from_matrix_and_dim_values(

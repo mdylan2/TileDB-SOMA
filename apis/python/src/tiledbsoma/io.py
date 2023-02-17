@@ -232,6 +232,7 @@ def _from_anndata_aux(
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     max_workers = soma._soma_options.max_thread_pool_workers
+    optimizations = list(soma._soma_options.array_types.keys())
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     futures = []
@@ -252,52 +253,55 @@ def _from_anndata_aux(
                 ingest_mode=ingest_mode,
             )
         )
-        futures.append(
-            executor.submit(
-                soma.X.add_layer_from_matrix_and_dim_values,
-                # Note:
-                # * Using anndata.X[:] loads the entire CSR (or whatever) into memory
-                # * If we use just anndata.X then we get a super-cool object which
-                #   we can index with things like matrix[0:10], matrix[10:20], etc
-                #   which would allow us even further control over memory use --
-                #   in particular this would allow us to do distributed ingest
-                #   via UDFs ...
-                # * ... but ... sadly there's a problem (in main-old).
-                # * Context: while in main the dims are join-ids and we can H5AD-read
-                #   and TileDB-write the matrices in their H5AD order (e.g. matrix[0:10] or
-                #   whatever), in main-old we must write string dims in sorted order
-                #   in order to avoid non-overlapping fragments. That in turn requires
-                #   util._get_sort_and_permutation() which gets matrix[i].nnz. And
-                #   in turn the anndata super-snazzy indexed-matrix object I was raving
-                #   about ... doesn't do well _at all_ in performance here. Effectively
-                #   the util._get_sort_and_permutation() never completes. :(
-                # * We can sub-sample -- just ask at most say 100 rows for their nnz and
-                #   extrapolate that up -- which works fine. But there's a deeper issue
-                #   which is (from h5py):
-                #     TypeError: Indexing elements must be in increasing order
-                #   i.e. h5py is not designed to do these permuted reads.
-                # * So for main we'll be able to drop the [:] here and it will be grand. :)
-                matrix=anndata.X[:],
-                row_names=anndata.obs.index,
-                col_names=anndata.var.index,
-                layer_name=X_layer_name,
-                ingest_mode=ingest_mode,
-            )
-        )
-
-        if anndata.layers is not None:
-            for layer_name in anndata.layers:
-                futures.append(
-                    executor.submit(
-                        soma.X.add_layer_from_matrix_and_dim_values,
-                        # See comments on anndata.X[:], above
-                        matrix=anndata.layers[layer_name][:],
-                        row_names=anndata.obs.index,
-                        col_names=anndata.var.index,
-                        layer_name=layer_name,
-                        ingest_mode=ingest_mode,
-                    )
+        for optimization_name in optimizations:
+            futures.append(
+                executor.submit(
+                    soma.X.add_layer_from_matrix_and_dim_values,
+                    # Note:
+                    # * Using anndata.X[:] loads the entire CSR (or whatever) into memory
+                    # * If we use just anndata.X then we get a super-cool object which
+                    #   we can index with things like matrix[0:10], matrix[10:20], etc
+                    #   which would allow us even further control over memory use --
+                    #   in particular this would allow us to do distributed ingest
+                    #   via UDFs ...
+                    # * ... but ... sadly there's a problem (in main-old).
+                    # * Context: while in main the dims are join-ids and we can H5AD-read
+                    #   and TileDB-write the matrices in their H5AD order (e.g. matrix[0:10] or
+                    #   whatever), in main-old we must write string dims in sorted order
+                    #   in order to avoid non-overlapping fragments. That in turn requires
+                    #   util._get_sort_and_permutation() which gets matrix[i].nnz. And
+                    #   in turn the anndata super-snazzy indexed-matrix object I was raving
+                    #   about ... doesn't do well _at all_ in performance here. Effectively
+                    #   the util._get_sort_and_permutation() never completes. :(
+                    # * We can sub-sample -- just ask at most say 100 rows for their nnz and
+                    #   extrapolate that up -- which works fine. But there's a deeper issue
+                    #   which is (from h5py):
+                    #     TypeError: Indexing elements must be in increasing order
+                    #   i.e. h5py is not designed to do these permuted reads.
+                    # * So for main we'll be able to drop the [:] here and it will be grand. :)
+                    matrix=anndata.X[:],
+                    optimization_name=optimization_name,
+                    row_names=anndata.obs.index,
+                    col_names=anndata.var.index,
+                    layer_name=X_layer_name,
+                    ingest_mode=ingest_mode,
                 )
+            )
+
+            if anndata.layers is not None:
+                for layer_name in anndata.layers:
+                    futures.append(
+                        executor.submit(
+                            soma.X.add_layer_from_matrix_and_dim_values,
+                            # See comments on anndata.X[:], above
+                            matrix=anndata.layers[layer_name][:],
+                            optimization_name=optimization_name,
+                            row_names=anndata.obs.index,
+                            col_names=anndata.var.index,
+                            layer_name=layer_name,
+                            ingest_mode=ingest_mode,
+                        )
+                    )
 
     for future in futures:
         future.result()
