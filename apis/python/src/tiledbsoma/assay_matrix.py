@@ -121,17 +121,13 @@ class AssayMatrix(TileDBArray):
         return self.dim_select(obs_ids, var_ids, return_arrow=return_arrow)
 
     # ----------------------------------------------------------------
-    def csr(
-        self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None
-    ) -> sp.csr_matrix:
+    def csr(self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None) -> sp.csr_matrix:
         """
         Like ``.df()`` but returns results in ``scipy.sparse.csr_matrix`` format.
         """
         return self._csr_or_csc("csr", obs_ids, var_ids)
 
-    def csc(
-        self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None
-    ) -> sp.csc_matrix:
+    def csc(self, obs_ids: Optional[Ids] = None, var_ids: Optional[Ids] = None) -> sp.csc_matrix:
         """
         Like ``.df()`` but returns results in ``scipy.sparse.csc_matrix`` format.
         """
@@ -220,23 +216,18 @@ class AssayMatrix(TileDBArray):
         if self.exists():
             log_io(None, f"{self._indent}Re-using existing array {self.nested_name}")
         else:
-            self._create_empty_array(matrix_dtype=matrix.dtype)
+            for optimization in self._soma_options.array_types:
+                self._create_empty_array(matrix_dtype=matrix.dtype, optimization=optimization)
 
         if ingest_mode != "schema_only":
             if not self._soma_options.write_X_chunked:
                 self._ingest_data_whole(matrix, row_names, col_names, ingest_mode)
             elif isinstance(matrix, sp.csr_matrix):
-                self._ingest_data_rows_chunked(
-                    matrix, row_names, col_names, ingest_mode
-                )
+                self._ingest_data_rows_chunked(matrix, row_names, col_names, ingest_mode)
             elif isinstance(matrix, sp.csc_matrix):
-                self._ingest_data_cols_chunked(
-                    matrix, row_names, col_names, ingest_mode
-                )
+                self._ingest_data_cols_chunked(matrix, row_names, col_names, ingest_mode)
             else:
-                self._ingest_data_dense_rows_chunked(
-                    matrix, row_names, col_names, ingest_mode
-                )
+                self._ingest_data_dense_rows_chunked(matrix, row_names, col_names, ingest_mode)
 
         self._consolidate_and_vacuum_fragment_metadata()
         self._set_object_type_metadata()
@@ -247,7 +238,7 @@ class AssayMatrix(TileDBArray):
         )
 
     # ----------------------------------------------------------------
-    def _create_empty_array(self, matrix_dtype: np.dtype) -> None:
+    def _create_empty_array(self, matrix_dtype: np.dtype, optimization: str) -> None:
         """
         Create a TileDB 2D sparse array with string dimensions and a single attribute.
         """
@@ -281,9 +272,9 @@ class AssayMatrix(TileDBArray):
             sparse=True,
             allows_duplicates=False,
             offsets_filters=self._soma_options.X_data_offset_filters,
-            capacity=self._soma_options.X_capacity,
-            cell_order=self._soma_options.X_cell_order,
-            tile_order=self._soma_options.X_tile_order,
+            capacity=self._soma_options.__getattribute__(f"X__{optimization}__capacity"),
+            cell_order=self._soma_options.__getattribute__(f"X__{optimization}__cell_order"),
+            tile_order=self._soma_options.__getattribute__(f"X__{optimization}__tile_order"),
             ctx=self._ctx,
         )
 
@@ -402,9 +393,7 @@ class AssayMatrix(TileDBArray):
             while i < nrow:
                 t1 = time.time()
                 # Find a number of CSR rows which will result in a desired nnz for the chunk.
-                chunk_size = util._find_csr_chunk_size(
-                    matrix, permutation, i, self._soma_options.goal_chunk_nnz
-                )
+                chunk_size = util._find_csr_chunk_size(matrix, permutation, i, self._soma_options.goal_chunk_nnz)
                 i2 = i + chunk_size
 
                 # Convert the chunk to a COO matrix.
@@ -424,9 +413,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (i2 - 1) / nrow)
 
                 chunk_mbr = ((d0[0], d0[-1]), (d1[0], d1[-1]))
-                if ingest_mode == "resume" and self._chunk_is_contained_in(
-                    chunk_mbr, ned
-                ):
+                if ingest_mode == "resume" and self._chunk_is_contained_in(chunk_mbr, ned):
                     log_io(
                         None,
                         "%sSKIP   chunk rows %d..%d of %d (%.3f%%), obs_ids %s..%s, nnz=%d"
@@ -468,8 +455,7 @@ class AssayMatrix(TileDBArray):
 
                 if chunk_percent < 100:
                     log_io(
-                        "... %s %7.3f%% done, ETA %s"
-                        % (self.nested_name, chunk_percent, eta),
+                        "... %s %7.3f%% done, ETA %s" % (self.nested_name, chunk_percent, eta),
                         "%sFINISH chunk in %.3f seconds, %7.3f%% done, ETA %s"
                         % (self._indent, chunk_seconds, chunk_percent, eta),
                     )
@@ -534,9 +520,7 @@ class AssayMatrix(TileDBArray):
             while j < ncol:
                 t1 = time.time()
                 # Find a number of CSC columns which will result in a desired nnz for the chunk.
-                chunk_size = util._find_csc_chunk_size(
-                    matrix, permutation, j, self._soma_options.goal_chunk_nnz
-                )
+                chunk_size = util._find_csc_chunk_size(matrix, permutation, j, self._soma_options.goal_chunk_nnz)
                 j2 = j + chunk_size
 
                 # Convert the chunk to a COO matrix.
@@ -556,9 +540,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (j2 - 1) / ncol)
 
                 chunk_mbr = ((d0[0], d0[-1]), (d1[0], d1[-1]))
-                if ingest_mode == "resume" and self._chunk_is_contained_in(
-                    chunk_mbr, ned
-                ):
+                if ingest_mode == "resume" and self._chunk_is_contained_in(chunk_mbr, ned):
                     log_io(
                         None,
                         "%sSKIP   chunk cols %d..%d of %d (%.3f%%), obs_ids %s..%s, nnz=%d"
@@ -600,8 +582,7 @@ class AssayMatrix(TileDBArray):
 
                 if chunk_percent < 100:
                     log_io(
-                        "... %s %7.3f%% done, ETA %s"
-                        % (self.nested_name, chunk_percent, eta),
+                        "... %s %7.3f%% done, ETA %s" % (self.nested_name, chunk_percent, eta),
                         "%sFINISH chunk in %.3f seconds, %7.3f%% done, ETA %s"
                         % (self._indent, chunk_seconds, chunk_percent, eta),
                     )
@@ -690,9 +671,7 @@ class AssayMatrix(TileDBArray):
                 chunk_percent = min(100, 100 * (i2 - 1) / nrow)
 
                 chunk_mbr = ((d0[0], d0[-1]), (d1[0], d1[-1]))
-                if ingest_mode == "resume" and self._chunk_is_contained_in(
-                    chunk_mbr, ned
-                ):
+                if ingest_mode == "resume" and self._chunk_is_contained_in(chunk_mbr, ned):
                     log_io(
                         None,
                         "%sSKIP   chunk rows %d..%d of %d (%.3f%%), obs_ids %s..%s, nnz=%d"
@@ -734,8 +713,7 @@ class AssayMatrix(TileDBArray):
 
                 if chunk_percent < 100:
                     log_io(
-                        "... %s %7.3f%% done, ETA %s"
-                        % (self.nested_name, chunk_percent, eta),
+                        "... %s %7.3f%% done, ETA %s" % (self.nested_name, chunk_percent, eta),
                         "%sFINISH chunk in %.3f seconds, %7.3f%% done, ETA %s"
                         % (self._indent, chunk_seconds, chunk_percent, eta),
                     )
