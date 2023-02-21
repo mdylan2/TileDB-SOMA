@@ -30,7 +30,6 @@ def default_X_data_attr_filters() -> List[tiledb.Filter]:
     ]
 
 
-
 # https://docs.python.org/3/library/dataclasses.html
 # ValueError: mutable default <class 'list'> for field X_data_row_filters is not allowed: use default_factory
 @dataclass(unsafe_hash=True)
@@ -45,16 +44,100 @@ class SOMAOptions:
     obs_extent: int = 256
     var_extent: int = 2048
 
-    X_data_row_filters: List[tiledb.Filter] = field(default_factory=default_X_data_row_filters)
-    X_data_col_filters: List[tiledb.Filter] = field(default_factory=default_X_data_col_filters)
-    X_data_offset_filters: List[tiledb.Filter] = field(default_factory=default_X_data_offset_filters)
-    X_data_attr_filters: List[tiledb.Filter] = field(default_factory=default_X_data_attr_filters)
+    X_data_row_filters: List[tiledb.Filter] = field(
+        default_factory=default_X_data_row_filters
+    )
+    X_data_col_filters: List[tiledb.Filter] = field(
+        default_factory=default_X_data_col_filters
+    )
+    X_data_offset_filters: List[tiledb.Filter] = field(
+        default_factory=default_X_data_offset_filters
+    )
+    X_data_attr_filters: List[tiledb.Filter] = field(
+        default_factory=default_X_data_attr_filters
+    )
 
     array_types: InitVar[Dict[str, Dict[str, Union[int, str]]]] = {
-        "row_opt": {"capacity": 1000, "tile_order": "row-major", "cell_order": "row-major"},
-        "col_opt": {"capacity": 1000, "tile_order": "col-major", "cell_order": "col-major"},
-        "hybrid_1": {"capacity": 1000, "tile_order": "row-major", "cell_order": "col-major"},
-        "hybrid_2": {"capacity": 1000, "tile_order": "col-major", "cell_order": "row-major"},
+        "row_opt": {
+            "capacity": 1000,
+            "tile_order": "row-major",
+            "cell_order": "row-major",
+        },
+        "col_opt": {
+            "capacity": 1000,
+            "tile_order": "col-major",
+            "cell_order": "col-major",
+        },
+        "hybrid_1": {
+            "capacity": 1000,
+            "tile_order": "row-major",
+            "cell_order": "col-major",
+        },
+        "hybrid_2": {
+            "capacity": 1000,
+            "tile_order": "col-major",
+            "cell_order": "row-major",
+        },
+        "row_opt_2": {
+            "tile_order": "row-major",
+            "cell_order": "row-major",
+            "capacity": 100,
+        },
+        "row_opt_3": {
+            "tile_order": "row-major",
+            "cell_order": "row-major",
+            "capacity": 10000,
+        },
+        "row_opt_4": {
+            "tile_order": "row-major",
+            "cell_order": "row-major",
+            "capacity": 100000,
+        },
+        "col_opt_2": {
+            "tile_order": "col-major",
+            "cell_order": "col-major",
+            "capacity": 100,
+        },
+        "col_opt_3": {
+            "tile_order": "col-major",
+            "cell_order": "col-major",
+            "capacity": 10000,
+        },
+        "col_opt_4": {
+            "tile_order": "col-major",
+            "cell_order": "col-major",
+            "capacity": 100000,
+        },
+        "hybrid_1_2": {
+            "tile_order": "row-major",
+            "cell_order": "col-major",
+            "capacity": 1000,
+        },
+        "hybrid_1_3": {
+            "tile_order": "row-major",
+            "cell_order": "col-major",
+            "capacity": 1000,
+        },
+        "hybrid_1_4": {
+            "tile_order": "row-major",
+            "cell_order": "col-major",
+            "capacity": 1000,
+        },
+        "hybdrid_2_2": {
+            "tile_order": "col-major",
+            "cell_order": "row-major",
+            "capacity": 100,
+        },
+        "hybdrid_2_3": {
+            "tile_order": "col-major",
+            "cell_order": "row-major",
+            "capacity": 10000,
+        },
+        "hybdrid_2_4": {
+            "tile_order": "col-major",
+            "cell_order": "row-major",
+            "capacity": 100000,
+        },
     }
 
     # Appropriate for SOMA use-cases: typically X queries are _not_ anything like subarray queries,
